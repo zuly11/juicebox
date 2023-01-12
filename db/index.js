@@ -160,6 +160,7 @@ async function getUserById(userId) {
 }
 
 async function getPostById(postId) {
+  console.log('getting posts by Id')
   try {
     const {
       rows: [post],
@@ -167,7 +168,7 @@ async function getPostById(postId) {
       `
       SELECT *
       FROM posts
-      WHERE id=${postId};
+      WHERE id=$1;
     `,
       [postId]
     );
@@ -177,7 +178,7 @@ async function getPostById(postId) {
       SELECT tags.*
       FROM tags
       JOIN post_tags ON tags.id=post_tags."tagId"
-      WHERE post_tags."postId"=${postId};
+      WHERE post_tags."postId"=$1;
     `,
       [postId]
     );
@@ -188,7 +189,7 @@ async function getPostById(postId) {
       `
       SELECT id, username, name, location
       FROM users
-      WHERE id=${postId};
+      WHERE id=$1;
     `,
       [post.authorId]
     );
@@ -219,22 +220,26 @@ async function createTags(tagList) {
 
   try {
     // insert the tags, doing nothing on conflict
-    const { rows } = await client.query(
+    // returning nothing, we'll query after
+    const response = await client.query(
       `INSERT INTO tags(name)
       VALUES (${insertValues})
-      ON CONFLICT (name) DO NOTHING;
-      SELECT * FROM tags
-      WHERE name
-      IN ${selectValues};
-      `
+      ON CONFLICT (name) DO NOTHING;`, 
+      tagList
     );
 
-    return rows;
-    // returning nothing, we'll query after
     // select all tags where the name is in our taglist
     // return the rows from the query
+    const { rows } = await client.query (
+      `SELECT * FROM tags
+      WHERE name
+      IN (${selectValues});
+      `, tagList
+    );
+    
+    return rows;
+    
   } catch (error) {
-    console.log(error);
     throw error;
   }
 }
@@ -259,9 +264,9 @@ async function addTagsToPost(postId, tagList) {
     const createPostTagPromises = tagList.map((tag) =>
       createPostTag(postId, tag.id)
     );
-
+    
     await Promise.all(createPostTagPromises);
-
+    
     return await getPostById(postId);
   } catch (error) {
     throw error;

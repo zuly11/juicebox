@@ -17,7 +17,6 @@ const {
 async function createInitialTags() {
   try {
     console.log("Starting to create tags...");
-    console.log("create tag");
 
     const [happy, sad, inspo, catman] = await createTags([
       "#happy",
@@ -25,9 +24,9 @@ async function createInitialTags() {
       "#youcandoanything",
       "#catmandoeverything",
     ]);
-    console.log("getting all post");
+  
     const [postOne, postTwo, postThree] = await getAllPosts();
-    console.log("getting all posts");
+    
     await addTagsToPost(postOne.id, [happy, inspo]);
     await addTagsToPost(postTwo.id, [sad, inspo]);
     await addTagsToPost(postThree.id, [happy, catman, inspo]);
@@ -41,16 +40,26 @@ async function createInitialTags() {
 
 async function createInitialPosts() {
   try {
-    console.log("Starting to create posts...");
     const [albert, sandra, glamgal] = await getAllUsers();
 
+    console.log("Starting to create posts...");
     await createPost({
       authorId: albert.id,
       title: "First Post",
-      content:
-        "This is my first post. I hope I love writing blogs as much as I love writing them.",
+      content: "This is my first post. I hope I love writing blogs as much as I love writing them."
     });
 
+    await createPost({
+      authorId: sandra.id,
+      title: "How does this work?",
+      content: "Seriously, does this even do anything?"
+    });
+
+    await createPost({
+      authorId: glamgal.id,
+      title: "Living the Glam Life",
+      content: "Do you even? I swear that half of you are posing."
+    });
     console.log("Finished creating posts!");
   } catch (error) {
     console.error("Error creating posts!");
@@ -132,8 +141,9 @@ async function createTables() {
           name varchar(255) UNIQUE NOT NULL
         );
         CREATE TABLE post_tags (
-          "postId" INTEGER REFERENCES posts(id) UNIQUE NOT NULL,
-          "tagId" INTEGER REFERENCES tags(id) UNIQUE NOT NULL
+          "postId" INTEGER REFERENCES posts(id) NOT NULL,
+          "tagId" INTEGER REFERENCES tags(id) NOT NULL,
+          UNIQUE ("postId", "tagId")
         );
       `);
 
