@@ -221,17 +221,20 @@ async function createTags(tagList) {
     // insert the tags, doing nothing on conflict
     const { rows } = await client.query(
       `INSERT INTO tags(name)
-    VALUES (${insertValues})
-    ON CONFLICT (name) DO NOTHING;
-    SELECT * FROM tags
-    WHERE name
-    IN (${selectValues});`
+      VALUES (${insertValues})
+      ON CONFLICT (name) DO NOTHING;
+      SELECT * FROM tags
+      WHERE name
+      IN ${selectValues};
+      `
     );
+
     return rows;
     // returning nothing, we'll query after
     // select all tags where the name is in our taglist
     // return the rows from the query
   } catch (error) {
+    console.log(error);
     throw error;
   }
 }
