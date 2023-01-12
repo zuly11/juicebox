@@ -17,6 +17,7 @@ const {
 async function createInitialTags() {
   try {
     console.log("Starting to create tags...");
+    console.log("create tag");
 
     const [happy, sad, inspo, catman] = await createTags([
       "#happy",
@@ -24,9 +25,9 @@ async function createInitialTags() {
       "#youcandoanything",
       "#catmandoeverything",
     ]);
-
+    console.log("getting all post");
     const [postOne, postTwo, postThree] = await getAllPosts();
-
+    console.log("getting all posts");
     await addTagsToPost(postOne.id, [happy, inspo]);
     await addTagsToPost(postTwo.id, [sad, inspo]);
     await addTagsToPost(postThree.id, [happy, catman, inspo]);
