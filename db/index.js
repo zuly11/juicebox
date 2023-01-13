@@ -114,12 +114,15 @@ async function updatePost(id, fields = { title, content, active }) {
 
 async function getAllPosts() {
   try {
-    const { rows } = await client.query(`
-      SELECT *
+    const { rows: postIds } = await client.query(`
+      SELECT id
       FROM posts;
     `);
-
-    return rows;
+    const posts = await Promise.all(
+      postIds.map((post) => getPostById(post.id))
+    );
+    console.log(posts);
+    return posts;
   } catch (error) {
     throw error;
   }
@@ -127,12 +130,17 @@ async function getAllPosts() {
 
 async function getPostsByUser(userId) {
   try {
-    const { rows } = await client.query(`
-      SELECT * FROM posts
+    const { rows: postIds } = await client.query(`
+      SELECT id
+      FROM posts
       WHERE "authorId"=${userId};
     `);
 
-    return rows;
+    const posts = await Promise.all(
+      postIds.map((post) => getPostById(post.id))
+    );
+
+    return posts;
   } catch (error) {
     throw error;
   }
@@ -160,7 +168,6 @@ async function getUserById(userId) {
 }
 
 async function getPostById(postId) {
-  console.log('getting posts by Id')
   try {
     const {
       rows: [post],
@@ -224,21 +231,21 @@ async function createTags(tagList) {
     const response = await client.query(
       `INSERT INTO tags(name)
       VALUES (${insertValues})
-      ON CONFLICT (name) DO NOTHING;`, 
+      ON CONFLICT (name) DO NOTHING;`,
       tagList
     );
 
     // select all tags where the name is in our taglist
     // return the rows from the query
-    const { rows } = await client.query (
+    const { rows } = await client.query(
       `SELECT * FROM tags
       WHERE name
       IN (${selectValues});
-      `, tagList
+      `,
+      tagList
     );
-    
+
     return rows;
-    
   } catch (error) {
     throw error;
   }
@@ -264,9 +271,9 @@ async function addTagsToPost(postId, tagList) {
     const createPostTagPromises = tagList.map((tag) =>
       createPostTag(postId, tag.id)
     );
-    
+
     await Promise.all(createPostTagPromises);
-    
+
     return await getPostById(postId);
   } catch (error) {
     throw error;
