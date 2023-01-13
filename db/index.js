@@ -63,12 +63,9 @@ async function getAllUsers() {
   return rows;
 }
 
-async function createPost({ authorId, title, content }) {
+async function createPost({ authorId, title, content, tags = [] }) {
   try {
-    const {
-      rows: [post],
-    } = await client.query(
-      `
+    const { rows: [post] } = await client.query(`
       INSERT INTO posts("authorId", title, content)
       VALUES ($1, $2, $3)
       RETURNING *;
@@ -76,7 +73,9 @@ async function createPost({ authorId, title, content }) {
       [authorId, title, content]
     );
 
-    return post;
+    const tagList = await createTags(tags);
+
+    return await addTagsToPost(post.id, tagList);
   } catch (error) {
     throw error;
   }
@@ -121,7 +120,7 @@ async function getAllPosts() {
     const posts = await Promise.all(
       postIds.map((post) => getPostById(post.id))
     );
-    console.log(posts);
+    
     return posts;
   } catch (error) {
     throw error;
