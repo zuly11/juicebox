@@ -65,7 +65,10 @@ async function getAllUsers() {
 
 async function createPost({ authorId, title, content, tags = [] }) {
   try {
-    const { rows: [post] } = await client.query(`
+    const {
+      rows: [post],
+    } = await client.query(
+      `
       INSERT INTO posts("authorId", title, content)
       VALUES ($1, $2, $3)
       RETURNING *;
@@ -81,31 +84,54 @@ async function createPost({ authorId, title, content, tags = [] }) {
   }
 }
 
-async function updatePost(id, fields = { title, content, active }) {
+async function updatePost(postId, fields = {}) {
+  // read off the tags & remove that field
+  const { tags } = fields; // might be undefined
+  delete fields.tags;
+
   // build the set string
   const setString = Object.keys(fields)
     .map((key, index) => `"${key}"=$${index + 1}`)
     .join(", ");
 
-  // return early if this is called without fields
-  if (setString.length === 0) {
-    return;
-  }
-
   try {
-    const {
-      rows: [post],
-    } = await client.query(
+    // update any fields that need to be updated
+    if (setString.length > 0) {
+      await client.query(
+        `
+        UPDATE posts
+        SET ${setString}
+        WHERE id=${postId}
+        RETURNING *;
+      `,
+        Object.values(fields)
+      );
+    }
+
+    // return early if there's no tags to update
+    if (tags === undefined) {
+      return await getPostById(postId);
+    }
+
+    // make any new tags that need to be made
+    const tagList = await createTags(tags);
+    const tagListIdString = tagList.map((tag) => `${tag.id}`).join(", ");
+
+    // delete any post_tags from the database which aren't in that tagList
+    await client.query(
       `
-      UPDATE posts
-      SET ${setString}
-      WHERE id=${id}
-      RETURNING *;
+      DELETE FROM post_tags
+      WHERE "tagId"
+      NOT IN (${tagListIdString})
+      AND "postId"=$1;
     `,
-      Object.values(fields)
+      [postId]
     );
 
-    return post;
+    // and create post_tags as necessary
+    await addTagsToPost(postId, tagList);
+
+    return await getPostById(postId);
   } catch (error) {
     throw error;
   }
@@ -120,7 +146,7 @@ async function getAllPosts() {
     const posts = await Promise.all(
       postIds.map((post) => getPostById(post.id))
     );
-    
+
     return posts;
   } catch (error) {
     throw error;
