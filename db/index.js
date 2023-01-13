@@ -65,10 +65,7 @@ async function getAllUsers() {
 
 async function createPost({ authorId, title, content, tags = [] }) {
   try {
-    const {
-      rows: [post],
-    } = await client.query(
-      `
+    const { rows: [post] } = await client.query(`
       INSERT INTO posts("authorId", title, content)
       VALUES ($1, $2, $3)
       RETURNING *;
@@ -85,17 +82,14 @@ async function createPost({ authorId, title, content, tags = [] }) {
 }
 
 async function updatePost(postId, fields = {}) {
-  // read off the tags & remove that field
-  const { tags } = fields; // might be undefined
+  const { tags } = fields; 
   delete fields.tags;
 
-  // build the set string
   const setString = Object.keys(fields)
     .map((key, index) => `"${key}"=$${index + 1}`)
     .join(", ");
 
   try {
-    // update any fields that need to be updated
     if (setString.length > 0) {
       await client.query(
         `
@@ -108,16 +102,13 @@ async function updatePost(postId, fields = {}) {
       );
     }
 
-    // return early if there's no tags to update
     if (tags === undefined) {
       return await getPostById(postId);
     }
 
-    // make any new tags that need to be made
     const tagList = await createTags(tags);
     const tagListIdString = tagList.map((tag) => `${tag.id}`).join(", ");
 
-    // delete any post_tags from the database which aren't in that tagList
     await client.query(
       `
       DELETE FROM post_tags
@@ -128,7 +119,6 @@ async function updatePost(postId, fields = {}) {
       [postId]
     );
 
-    // and create post_tags as necessary
     await addTagsToPost(postId, tagList);
 
     return await getPostById(postId);
@@ -173,9 +163,7 @@ async function getPostsByUser(userId) {
 
 async function getUserById(userId) {
   try {
-    const {
-      rows: [user],
-    } = await client.query(`
+    const { rows: [user] } = await client.query(`
       SELECT * FROM users
       WHERE "id"=${userId};
     `);
@@ -194,10 +182,7 @@ async function getUserById(userId) {
 
 async function getPostById(postId) {
   try {
-    const {
-      rows: [post],
-    } = await client.query(
-      `
+    const { rows: [post] } = await client.query(`
       SELECT *
       FROM posts
       WHERE id=$1;
@@ -215,10 +200,7 @@ async function getPostById(postId) {
       [postId]
     );
 
-    const {
-      rows: [author],
-    } = await client.query(
-      `
+    const { rows: [author] } = await client.query(`
       SELECT id, username, name, location
       FROM users
       WHERE id=$1;
@@ -242,17 +224,11 @@ async function createTags(tagList) {
     return;
   }
 
-  // need something like: $1), ($2), ($3
   const insertValues = tagList.map((_, index) => `$${index + 1}`).join("), (");
-  // then we can use: (${ insertValues }) in our string template
 
-  // need something like $1, $2, $3
   const selectValues = tagList.map((_, index) => `$${index + 1}`).join(", ");
-  // then we can use (${ selectValues }) in our string template
 
   try {
-    // insert the tags, doing nothing on conflict
-    // returning nothing, we'll query after
     const response = await client.query(
       `INSERT INTO tags(name)
       VALUES (${insertValues})
@@ -260,8 +236,6 @@ async function createTags(tagList) {
       tagList
     );
 
-    // select all tags where the name is in our taglist
-    // return the rows from the query
     const { rows } = await client.query(
       `SELECT * FROM tags
       WHERE name
@@ -305,6 +279,24 @@ async function addTagsToPost(postId, tagList) {
   }
 }
 
+async function getPostsByTagName(tagName) {
+  try {
+    const { rows: postIds } = await client.query(`
+      SELECT posts.id
+      FROM posts
+      JOIN post_tags ON posts.id=post_tags."postId"
+      JOIN tags ON tags.id=post_tags."tagId"
+      WHERE tags.name=$1;
+    `, [tagName]);
+
+    return await Promise.all(postIds.map(
+      post => getPostById(post.id)
+    ));
+  } catch (error) {
+    throw error;
+  }
+} 
+
 // and export them
 module.exports = {
   client,
@@ -320,4 +312,5 @@ module.exports = {
   createPostTag,
   addTagsToPost,
   getPostById,
+  getPostsByTagName
 };
