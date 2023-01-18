@@ -8,7 +8,6 @@
     "start": "node index.js",
     "start:dev": "nodemon index.js"
   },
-  
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,6 +16,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
+    "morgan": "^1.10.0",
     "pg": "^8.8.0"
   }
 }

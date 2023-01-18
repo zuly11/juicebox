@@ -65,7 +65,10 @@ async function getAllUsers() {
 
 async function createPost({ authorId, title, content, tags = [] }) {
   try {
-    const { rows: [post] } = await client.query(`
+    const {
+      rows: [post],
+    } = await client.query(
+      `
       INSERT INTO posts("authorId", title, content)
       VALUES ($1, $2, $3)
       RETURNING *;
@@ -82,7 +85,7 @@ async function createPost({ authorId, title, content, tags = [] }) {
 }
 
 async function updatePost(postId, fields = {}) {
-  const { tags } = fields; 
+  const { tags } = fields;
   delete fields.tags;
 
   const setString = Object.keys(fields)
@@ -163,7 +166,9 @@ async function getPostsByUser(userId) {
 
 async function getUserById(userId) {
   try {
-    const { rows: [user] } = await client.query(`
+    const {
+      rows: [user],
+    } = await client.query(`
       SELECT * FROM users
       WHERE "id"=${userId};
     `);
@@ -182,7 +187,10 @@ async function getUserById(userId) {
 
 async function getPostById(postId) {
   try {
-    const { rows: [post] } = await client.query(`
+    const {
+      rows: [post],
+    } = await client.query(
+      `
       SELECT *
       FROM posts
       WHERE id=$1;
@@ -200,7 +208,10 @@ async function getPostById(postId) {
       [postId]
     );
 
-    const { rows: [author] } = await client.query(`
+    const {
+      rows: [author],
+    } = await client.query(
+      `
       SELECT id, username, name, location
       FROM users
       WHERE id=$1;
@@ -281,21 +292,33 @@ async function addTagsToPost(postId, tagList) {
 
 async function getPostsByTagName(tagName) {
   try {
-    const { rows: postIds } = await client.query(`
+    const { rows: postIds } = await client.query(
+      `
       SELECT posts.id
       FROM posts
       JOIN post_tags ON posts.id=post_tags."postId"
       JOIN tags ON tags.id=post_tags."tagId"
       WHERE tags.name=$1;
-    `, [tagName]);
+    `,
+      [tagName]
+    );
 
-    return await Promise.all(postIds.map(
-      post => getPostById(post.id)
-    ));
+    return await Promise.all(postIds.map((post) => getPostById(post.id)));
   } catch (error) {
     throw error;
   }
-} 
+}
+
+async function getAllTags() {
+  try {
+    const { rows: tags } = await client.query(`
+    SELECT * FROM tags;
+    `);
+    return tags;
+  } catch (error) {
+    throw error;
+  }
+}
 
 // and export them
 module.exports = {
@@ -312,5 +335,6 @@ module.exports = {
   createPostTag,
   addTagsToPost,
   getPostById,
-  getPostsByTagName
+  getPostsByTagName,
+  getAllTags,
 };
